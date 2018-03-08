@@ -22,22 +22,22 @@ numberOfDays <- function(date) {
 #Shiny user interface ###############################################
 
 ui <- dashboardPage(
-  dashboardHeader(title = "Basic dashboard"),
+  dashboardHeader(title = "Reservoir Refill Scenarios"),
   dashboardSidebar(),
   dashboardBody(
     # Boxes need to be put in a row (or column)
     fluidRow(
-      box(plotOutput("plot1", height = 250)),
+      box(plotOutput("plot1", height = 500), width = 9),
     
     
     
-      box(
+      box(width = 3,
         title = "Controls",
         numericInput('beginning_storage', 'Beginning Storage', 9.1),
         dateInput('date_input', 'Date', value = NULL, min = NULL, max = NULL,
                   format = "yyyy-mm-dd", startview = "month", weekstart = 0,
                   language = "en", width = NULL),
-        sliderInput("slider", "Monthly withdrawals:(tbd)", 10, 100, 34)
+        sliderInput("slider", "Tbd(Monthly withdrawals)", 10, 100, 34)
       )
     )
   )
@@ -93,6 +93,7 @@ server <- function(input, output) {
   
     quants <- c(0.05,0.50,0.9,0.95)
     percentile.df <- apply( d.df[2:81] , 1 , quantile , probs = quants , na.rm = TRUE )
+    #need to use month function for this
     colnames(percentile.df) <- c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")
     #percentile5.df <- percentile.df[1, ]
     
