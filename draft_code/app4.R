@@ -31,10 +31,10 @@ ui <- dashboardPage(
       
       box(width = 3,
           title = "Controls",
-          dateInput('date_input', 'Date', value = "2017-07-01", min = "2017-06-01", max = "2018-05-30",
+          dateInput('date_input', 'Date', value = NULL, min = NULL, max = NULL,
                     format = "yyyy-mm-dd", startview = "month", weekstart = 0,
                     language = "en", width = NULL),
-          numericInput('beginning_storage', 'Beginning Storage (BG)', 3.0),
+          numericInput('beginning_storage', 'Beginning Storage (BG)', 7.1),
           numericInput('capacity', 'Capacity (BG)', 10.12),
           numericInput('dead_storage', 'Dead Storage (BG)', 0),
           numericInput('min_wqrl', 'Minimum WQ Release (MGD)', 16),
@@ -164,7 +164,7 @@ server <- function(input, output) {
     emergency.df <- rep(1,12)
     
     #Plots############################################################# 
-    plot(index_prevmonth_today:12,percentile.df[2,index_prevmonth_today:12],type="l",xlim=range(1:12),ylim=range(deadstorage:11),xaxs="i",yaxs="i",xlab="Month",ylab="Storage (BG)",axes=FALSE,frame.plot=TRUE)
+    plot(index_prevmonth_today:12,percentile.df[2,index_prevmonth_today:12],type="l",xlim=range(1:12),ylim=range(deadstorage:11),xaxs="i",yaxs="i",xlab="month",ylab="Storage (BG)",axes=FALSE,frame.plot=TRUE)
     polygon(c(1:12,12:1),c(rep(deadstorage,12),rep(1,12)),col="rosybrown1",border=NA)
     polygon(c(1:12,12:1),c(rep(1,12),rep(capacity,12)),col="lightblue",border=NA)
     polygon(c(1:12,12:1),c(rep(capacity,12),rep(11,12)),col="grey",border=NA)

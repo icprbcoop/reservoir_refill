@@ -31,10 +31,10 @@ ui <- dashboardPage(
       
       box(width = 3,
           title = "Controls",
-          dateInput('date_input', 'Date', value = "2017-07-01", min = "2017-06-01", max = "2018-05-30",
+          dateInput('date_input', 'Date', value = NULL, min = NULL, max = NULL,
                     format = "yyyy-mm-dd", startview = "month", weekstart = 0,
                     language = "en", width = NULL),
-          numericInput('beginning_storage', 'Beginning Storage (BG)', 3.0),
+          numericInput('beginning_storage', 'Beginning Storage (BG)', 7.1),
           numericInput('capacity', 'Capacity (BG)', 10.12),
           numericInput('dead_storage', 'Dead Storage (BG)', 0),
           numericInput('min_wqrl', 'Minimum WQ Release (MGD)', 16),
@@ -57,14 +57,6 @@ server <- function(input, output) {
     minwqrel <- input$min_wqrl  #minimum water quality release
     capacity <- input$capacity
     
-    #todayis <- as.Date("2018-10-5", "%Y-%m-%d")  #input variable (to be)
-    #todayis <- input$date_input
-    #startstorage <- 7.1                        
-    #deadstorage <- 0
-    #minwqrel <- 16 #minimum water quality release
-    #capacity <- 10.12
-    #withdrawal <- 34
-    
     inflow.df = read.csv("data/inflows.csv", header = TRUE, sep = ',')
     withdrawals.df = read.csv("data/monthly_withdrawals.csv", header = FALSE, sep = ',')
     month_order <- c(6,7,8,9,10,11,12,1,2,3,4,5)
@@ -83,7 +75,7 @@ server <- function(input, output) {
       "April",
       "May"
     )
-    quants <- c(0.05,0.1,0.25,0.5,0.75,0.9)
+    quants <- c(0.05,0.50,0.9,0.95)
     
     #Processing#######################################################
     
@@ -109,10 +101,10 @@ server <- function(input, output) {
     ratiodays_todaysis <- rdays_todayis / ndays_todayis
     
     #Calculating traces###############################################
-    b.df <- (withdrawal + (minwqrel*0.646))* rdays_todayis / 1000    # need to add conversion constants as inputs
+    b.df <- (withdrawals.df + (minwqrel*0.646))* rdays_todayis / 1000    # need to add conversion constants as inputs
     a.df <- startstorage - b.df
     c.df <- monthinflow4.df * ratiodays_todaysis / 1000
-    d.df <- startstorage - b.df + c.df
+    d.df <- a.df$V2 + c.df
     
     d.df$Month <- monthinflow4.df$Month
     d.df$MonthIndex <- month_index
@@ -120,8 +112,7 @@ server <- function(input, output) {
     ##################put in function###############################
     #remove previous months (put NA values)
     month_today <- c(month(todayis))
-    index_month_today <- match(c(month_today),d.df$Month)
-    index_prevmonth_today <- index_month_today-1
+    index_month_today <- match(c(month_today),d.df$Month) 
     d.df$RegIndex <- c(1:12)
     
     wide.df <- d.df
@@ -130,7 +121,7 @@ server <- function(input, output) {
     
     
     sub.df <- long.df %>% 
-      dplyr::mutate(value = dplyr::if_else(RegIndex != index_month_today, as.numeric(NA), value))
+      dplyr::mutate(value = dplyr::if_else(RegIndex < index_month_today, as.numeric(NA), value))
     
     wide.sub <- sub.df %>% 
       tidyr::spread(year, value)%>%
@@ -141,13 +132,11 @@ server <- function(input, output) {
     test1.df <- dplyr::select(test.df, -c(Month, MonthIndex, RegIndex, 1929)) 
     
     for(j in names(test1.df)){
-      for(i in index_month_today:(nrow(test1.df))) {
-        #print (i)
-        if ( i==index_month_today) {
+      for(i in seq(nrow(test1.df))) {
+        if (i == 1 | i== b) {
           test1.df[[j]][i] <- test1.df[[j]][i]
-          test1.df[[j]][i - 1] <- startstorage
         } else {
-          test1.df[[j]][i] <-  test1.df[[j]][i - 1]  - b.df +  c.df[[j]][i]
+          test1.df[[j]][i] <-  test1.df[[j]][i - 1] - startstorage + test1.df[[j]][i]
         }
       }
       
@@ -159,25 +148,19 @@ server <- function(input, output) {
     e.df$Month <- monthinflow4.df$Month
     e.df$MonthIndex <- month_index
     
-    percentile.df <- apply( e.df[2:80] , 1 , quantile , probs = quants , na.rm = TRUE )
+    percentile.df <- apply( e.df[2:81] , 1 , quantile , probs = quants , na.rm = TRUE )
     colnames(percentile.df) <- month_names
-    emergency.df <- rep(1,12)
+    
     
     #Plots############################################################# 
-    plot(index_prevmonth_today:12,percentile.df[2,index_prevmonth_today:12],type="l",xlim=range(1:12),ylim=range(deadstorage:11),xaxs="i",yaxs="i",xlab="Month",ylab="Storage (BG)",axes=FALSE,frame.plot=TRUE)
-    polygon(c(1:12,12:1),c(rep(deadstorage,12),rep(1,12)),col="rosybrown1",border=NA)
-    polygon(c(1:12,12:1),c(rep(1,12),rep(capacity,12)),col="lightblue",border=NA)
-    polygon(c(1:12,12:1),c(rep(capacity,12),rep(11,12)),col="grey",border=NA)
-    #polygon(c(1:12,12:1),c(percentile.df[1,],rev(percentile.df[6,])),col="skyblue")
+    plot(index_month_today:12,percentile.df[2,index_month_today:12],type="l",xlim=range(1:12),ylim=range(deadstorage:capacity),xaxs="i",yaxs="i",xlab="Month",ylab="Storage (BG)")
+    #polygon(c(1:12,12:1),c(percentile.df[1,],rev(percentile.df[4,])),col="skyblue",border=NA)
     #polygon(c(1:12,12:1),c(percentile.df[1,],rev(percentile.df[3,])),col="skyblue",border=NA)
-    lines(index_prevmonth_today:12,(percentile.df[1,index_prevmonth_today:12]),lty=1,lwd=2, type="b", pch=19, cex=1.2, col="red")
-    lines(index_prevmonth_today:12,(percentile.df[2,index_prevmonth_today:12]),lty=1,lwd=2,col="orange", type="b", pch=18, cex=2)
-    lines(index_prevmonth_today:12,(percentile.df[3,index_prevmonth_today:12]),lty=1,lwd=2,col="yellow", type="b", pch=15, cex=1.5)
-    lines(index_prevmonth_today:12,(percentile.df[4,index_prevmonth_today:12]),lty=1,lwd=2,col="green", type="b", pch=23, cex=1.5)
-    legend("bottomright", inset=.04, legend=c("5th", "10th", "25th", "50th"), col=c("red", "orange", "yellow", "green"), lty=1:1, cex=1.2)
-    axis(1, at=1:12, labels=month.abb[month_order])
-    axis(2, labels=TRUE)
-    #Axis(side=1, labels=FALSE)
+    lines(index_month_today:12,(percentile.df[1,index_month_today:12]),lty=1,lwd=2, col="red")
+    lines(index_month_today:12,(percentile.df[2,index_month_today:12]),lty=1,lwd=2,col="orange")
+    lines(index_month_today:12,(percentile.df[3,index_month_today:12]),lty=1,lwd=2,col="yellow")
+    lines(index_month_today:12,(percentile.df[4,index_month_today:12]),lty=1,lwd=2,col="green")
+    legend("bottomright", inset=.04, legend=c("5th", "10th", "25th", "50th"), col=c("red", "orange", "yellow", "green"), lty=1:1, cex=0.8)
     
   })
 }

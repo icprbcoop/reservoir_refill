@@ -71,6 +71,7 @@ d.df <- a.df$V2 + c.df
 d.df <- replace(d.df, d.df > capacity, capacity)
 d.df <- replace(d.df, d.df < deadstorage, deadstorage)
 d.df$Month <- monthinflow4.df$Month
+#d.df <- replace(d.df, d.df$Month < month(todayis), 999)
 d.df$MonthIndex <- c(6,7,8,9,10,11,12,13,14,15,16,17)
 
 quants <- c(0.05,0.50,0.9,0.95)
